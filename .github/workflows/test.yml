@@ -34,7 +34,9 @@ jobs:
           persist-credentials: false
 
       - name: Create fixture repository
-        run: vipi-action/tests/fixture.sh "${{ matrix.case }}"
+        env:
+          CASE: ${{ matrix.case }}
+        run: vipi-action/tests/fixture.sh "$CASE"
 
       # Default cloud mode without keys: no models are downloaded, and remaining
       # images fail before OCR, which keeps the test free and fast.
@@ -51,8 +53,9 @@ jobs:
           OPENAI_API_KEY: ""
 
       - name: Check report
-        run: >
-          python3 vipi-action/tests/check_report.py "${{ matrix.case }}"
-          "${{ steps.vipi.outputs.report-path }}"
-          "${{ steps.vipi.outputs.selected-images }}"
-          "${{ steps.vipi.outcome }}"
+        env:
+          CASE: ${{ matrix.case }}
+          REPORT: ${{ steps.vipi.outputs.report-path }}
+          SELECTED: ${{ steps.vipi.outputs.selected-images }}
+          OUTCOME: ${{ steps.vipi.outcome }}
+        run: python3 vipi-action/tests/check_report.py "$CASE" "$REPORT" "$SELECTED" "$OUTCOME"
