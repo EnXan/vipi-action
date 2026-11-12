@@ -84,12 +84,23 @@ class SummaryTest(unittest.TestCase):
         self.assertIn("not scanned", output)
         self.assertIn("Detector refused", output)
 
-    def test_empty_selection_and_skipped_inputs(self):
-        skipped = [{"path": "/work/repo/gen/x.png", "reason": "excluded_by_user", "rule": "gen/"}]
+    def test_empty_selection_lists_only_user_exclusions(self):
+        skipped = [
+            {"path": "/work/repo/gen/x.png", "reason": "excluded_by_user", "rule": "gen/"},
+            {"path": "/work/repo/.github/workflows/scan.yml", "reason": "unsupported_type"},
+            {"path": "/work/repo/node_modules", "reason": "excluded_directory"},
+        ]
         output = render(report([], exit_code=0, skipped=skipped))
         self.assertIn("## VIPI scan: ✅ No images to scan", output)
-        self.assertIn("<summary>Skipped inputs (1)</summary>", output)
-        self.assertIn("gen/x\\.png: excluded\\_by\\_user (rule gen/)", output)
+        self.assertIn("| 0 | 0 | 0 | 0 | 0 | 0 | 1 |", output)
+        self.assertIn("<summary>Excluded by your rules (1)</summary>", output)
+        self.assertIn("- gen/x\\.png (rule gen/)", output)
+        self.assertNotIn("scan\\.yml", output)
+        self.assertNotIn("node\\_modules", output)
+
+    def test_scores_are_rounded_to_one_decimal(self):
+        output = render(report([scanned("a.png", "injection_detected", 0.993245)], exit_code=1))
+        self.assertIn("| 99.3 | 80 |", output)
 
     def test_missing_report(self):
         output = summary.main(["summary.py", "/nonexistent/vipi-report.json"])

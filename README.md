@@ -120,7 +120,8 @@ missing key ends the scan before OCR with exit code 2 and names the variable.
 
 After every run, including failed ones, the Action writes a summary to the
 job page: the overall result, counts, findings, errors, every selected image
-with its score and threshold, and the skipped inputs. Images whose OCR text
+with its score (rounded to one decimal) and threshold, and the images excluded
+by your rules. Non-image files and built-in exclusions are left out. Images whose OCR text
 may be incomplete are marked. OCR text is not shown; it stays in the JSON
 report. File names are escaped, so they cannot change the page.
 
