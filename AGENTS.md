@@ -67,8 +67,12 @@ wires it into GitHub workflows. The design is recorded in VIPI's
 - Add or update a fixture case for every behavior change. Images that should be
   selected run in cloud mode without keys, so they fail before OCR and appear as
   `not_scanned`.
+- Cases that need a non-PR event (such as `full-scan`) run on pushes and
+  manual runs only.
 - To test an unreleased VIPI change, run the workflow manually with `vipi-ref`.
-  A real scan with provider keys is manual and needs the maintainer's approval.
+- The `cloud-scan` job is the only real scan: manual, opt-in and paid. Run it
+  only with the maintainer's approval, for example before a release that
+  changes installation or the pinned `vipi-scanner` version.
 
 ## Contributing
 

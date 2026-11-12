@@ -10,6 +10,10 @@ on:
         description: Test with this Git ref of EnXan/VIPI instead of the pinned PyPI release
         required: false
         default: ""
+      cloud-scan:
+        description: Also run a real cloud scan of two images (paid, about $0.01; needs provider secrets)
+        type: boolean
+        default: false
 
 permissions:
   contents: read
@@ -59,3 +63,73 @@ jobs:
           SELECTED: ${{ steps.vipi.outputs.selected-images }}
           OUTCOME: ${{ steps.vipi.outcome }}
         run: python3 vipi-action/tests/check_report.py "$CASE" "$REPORT" "$SELECTED" "$OUTCOME"
+
+  # Without base-ref, the Action scans all images under paths. PR events always
+  # diff against the PR base, so this case runs on pushes and manual runs only.
+  full-scan:
+    name: selection (full-scan)
+    if: github.event_name != 'pull_request'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          path: vipi-action
+          persist-credentials: false
+
+      - name: Create fixture repository
+        run: vipi-action/tests/fixture.sh full-scan
+
+      - name: Run action
+        id: vipi
+        continue-on-error: true
+        uses: ./vipi-action
+        with:
+          vipi-ref: ${{ inputs.vipi-ref }}
+        env:
+          GOOGLE_CLOUD_API_KEY: ""
+          OPENAI_API_KEY: ""
+
+      - name: Check report
+        env:
+          REPORT: ${{ steps.vipi.outputs.report-path }}
+          SELECTED: ${{ steps.vipi.outputs.selected-images }}
+          OUTCOME: ${{ steps.vipi.outcome }}
+        run: python3 vipi-action/tests/check_report.py full-scan "$REPORT" "$SELECTED" "$OUTCOME"
+
+  # Real scan with the default providers: paid, so manual and opt-in only.
+  cloud-scan:
+    name: cloud scan (paid)
+    if: github.event_name == 'workflow_dispatch' && inputs.cloud-scan
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          path: vipi-action
+          persist-credentials: false
+
+      - name: Run action
+        id: vipi
+        continue-on-error: true
+        uses: ./vipi-action
+        with:
+          paths: |
+            vipi-action/tests/images/injection.png
+            vipi-action/tests/images/benign.png
+          vipi-ref: ${{ inputs.vipi-ref }}
+        env:
+          GOOGLE_CLOUD_API_KEY: ${{ secrets.GOOGLE_CLOUD_API_KEY }}
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+
+      - name: Check report
+        env:
+          REPORT: ${{ steps.vipi.outputs.report-path }}
+          SELECTED: ${{ steps.vipi.outputs.selected-images }}
+          OUTCOME: ${{ steps.vipi.outcome }}
+        run: python3 vipi-action/tests/check_report.py cloud-scan "$REPORT" "$SELECTED" "$OUTCOME"
+
+      - name: Upload report
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: cloud-scan-report
+          path: ${{ steps.vipi.outputs.report-path }}
