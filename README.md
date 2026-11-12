@@ -138,12 +138,25 @@ at your own risk.
 
 ## Development
 
-`.github/workflows/test.yml` runs the Action against fixture Git repositories
-on every PR, without secrets or model downloads: an empty diff, rules from the
-base branch, a rule change on the PR branch, and the `exclude` input. Images
-that remain are run in cloud mode without keys, so they fail before OCR and the
-test checks the report. Run the workflow manually with `vipi-ref` to test an
-unreleased VIPI change.
+`.github/workflows/test.yml` runs the Action against fixture Git repositories,
+without secrets or model downloads, on every PR, on pushes to `main` and
+manually:
+
+- **On every run:** an empty diff, rules from the base branch, a rule change on
+  the PR branch, and the `exclude` input.
+- **On pushes and manual runs:** a scan without diff (`base-ref` unset), which
+  PR events cannot test because they always compare against the PR base.
+
+Images that remain run in cloud mode without keys, so they fail before OCR and
+the test checks the report.
+
+Run the workflow manually (**Actions → Test action → Run workflow**) with:
+
+- `vipi-ref` to test an unreleased VIPI branch or commit;
+- `cloud-scan` to also scan [two test images](tests/images) with the default
+  providers and check that the injection is detected and the benign image is
+  not. This is paid (about $0.01 per run) and needs the repository secrets
+  `GOOGLE_CLOUD_API_KEY` and `OPENAI_API_KEY`.
 
 Release: bump `vipi-version`'s default to the new PyPI release, let the tests
 pass, tag `vX.Y.Z` and move `v1`.

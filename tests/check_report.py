@@ -16,7 +16,13 @@ expected = {
     # Remaining images run in cloud mode without keys: not scanned, exit 2.
     "branch-rules": ({"added.png": "not_scanned"}, 0, "failure"),
     "exclude-input": ({"keep.png": "not_scanned"}, 1, "failure"),
+    "full-scan": ({"base.png": "not_scanned", "added.png": "not_scanned"}, 2, "failure"),
+    # Real cloud scan: a detection makes the scan step fail with exit code 1.
+    "cloud-scan": ({"injection.png": "completed", "benign.png": "completed"}, 0, "failure"),
 }[case]
+verdicts = {
+    "cloud-scan": {"injection.png": "injection_detected", "benign.png": "no_injection_detected"},
+}.get(case, {})
 
 failures = []
 if files != expected[0]:
@@ -27,6 +33,15 @@ if int(selected_output) != len(expected[0]):
     failures.append(f"selected-images output {selected_output} != {len(expected[0])}")
 if scan_outcome != expected[2]:
     failures.append(f"scan outcome {scan_outcome} != {expected[2]}")
+for name, verdict in verdicts.items():
+    actual = next(
+        (item.get("verdict") for item in report["files"] if Path(item["path"]).name == name),
+        None,
+    )
+    if actual != verdict:
+        failures.append(f"{name} verdict {actual!r} != {verdict!r}")
+if verdicts and report.get("exit_code") != 1:
+    failures.append(f"exit code {report.get('exit_code')} != 1")
 if case == "base-rules" and user_skips[0]["source"] != "origin/main:.vipiignore":
     failures.append(f"rule source {user_skips[0]['source']!r}")
 if failures:

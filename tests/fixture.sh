@@ -37,6 +37,9 @@ case "$case_name" in
   base-rules) png added.png 2 ;;
   branch-rules) printf '*.png\n' > .vipiignore; png added.png 2 ;;
   exclude-input) png keep.png 2; png generated/skip.png 3 ;;
+  # Without a diff, every image in the worktree is selected; the worktree
+  # .vipiignore applies, and the Action checkout is excluded from the scan.
+  full-scan) png added.png 2; png skip.png 3; printf 'skip.png\nvipi-action/\n' > .vipiignore ;;
   *) echo "Unknown case: $case_name" >&2; exit 2 ;;
 esac
 commit feature
