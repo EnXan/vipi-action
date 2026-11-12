@@ -36,15 +36,14 @@ jobs:
       - name: Create fixture repository
         run: vipi-action/tests/fixture.sh "${{ matrix.case }}"
 
-      # Cloud mode without keys: no models are downloaded, and remaining images
-      # fail before OCR, which keeps the test free and fast.
+      # Default cloud mode without keys: no models are downloaded, and remaining
+      # images fail before OCR, which keeps the test free and fast.
       - name: Run action
         id: vipi
         continue-on-error: true
         uses: ./vipi-action
         with:
           base-ref: main
-          modus: cloud
           exclude: ${{ matrix.exclude }}
           vipi-ref: ${{ inputs.vipi-ref }}
         env:

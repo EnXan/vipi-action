@@ -7,7 +7,8 @@ A finding fails the job.
 
 ## Usage
 
-Scan the images a pull request adds or changes, in cloud mode:
+Scan the images a pull request adds or changes. The default cloud mode uses
+Google Cloud Vision for OCR and OpenAI for decisions:
 
 ```yaml
 name: VIPI image scan
@@ -24,8 +25,6 @@ jobs:
         with:
           fetch-depth: 0
       - uses: EnXan/vipi-action@v1
-        with:
-          modus: cloud
         env:
           GOOGLE_CLOUD_API_KEY: ${{ secrets.GOOGLE_CLOUD_API_KEY }}
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
@@ -48,8 +47,8 @@ case.
 > **Local mode on hosted runners:** standard GitHub-hosted runners have no GPU
 > and too little memory for the local models. In our test, `balanced` took
 > about 9 minutes for two images plus 2 minutes of setup, and `quality` could
-> not load its model. Use cloud mode, or self-hosted or larger runners for
-> local mode.
+> not load its model. Set `modus: local` only on self-hosted or larger
+> runners. Local gated models may need `HF_TOKEN`.
 
 ## Inputs
 
@@ -58,7 +57,7 @@ case.
 | `paths` | `.` | Newline-separated image files or directories to scan |
 | `base-ref` | Unset | Base branch for non-PR diff scans; PRs always use their actual base branch |
 | `exclude` | Unset | Newline-separated exclusion rules, applied after `.vipiignore` |
-| `modus` | `local` | Full scan execution: `local` or `cloud` |
+| `modus` | `cloud` | Full scan execution: `cloud` or `local` |
 | `ocr-mode` | `quality` | Local profile: `speed`, `balanced` or `quality`; ignored in cloud mode |
 | `ocr-provider` | `google` | Cloud OCR: `google`, `openai` or `mistral`; ignored in local mode |
 | `decision-provider` | Unset | Override the mode's decision model (local `clef-flash`/`d1`, cloud `openai`/`jev`) |

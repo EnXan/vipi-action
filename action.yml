@@ -18,9 +18,9 @@ inputs:
     required: false
     default: ""
   modus:
-    description: Full scan execution (local or cloud)
+    description: Full scan execution (cloud or local); local needs a runner with enough memory, ideally a GPU
     required: false
-    default: local
+    default: cloud
   ocr-mode:
     description: Local OCR profile (speed, balanced or quality); ignored in cloud mode
     required: false
