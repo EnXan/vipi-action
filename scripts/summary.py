@@ -42,7 +42,7 @@ def display_path(path):
 
 
 def score(value):
-    return "–" if value is None else f"{value * 100:g}"
+    return "–" if value is None else f"{round(value * 100, 1):g}"
 
 
 def file_note(item):
@@ -77,14 +77,18 @@ def render(report, *, detail="full"):
     if not files and report.get("exit_code") == 0:
         headline = "✅ No images to scan"
     lines = [f"## VIPI scan: {headline}", ""]
+    # Only user exclusions are shown; non-image files and built-in exclusions
+    # (for example .git) stay in the JSON report.
+    excluded = [item for item in report.get("skipped", []) if item.get("reason") == "excluded_by_user"]
     lines += [
-        "| Selected | Completed | Detections | OCR may be incomplete | Failed | Not scanned | Skipped |",
+        "| Selected | Completed | Detections | OCR may be incomplete | Failed | Not scanned | Excluded |",
         "| --: | --: | --: | --: | --: | --: | --: |",
         "| {} | {} | {} | {} | {} | {} | {} |".format(
             *(summary.get(key, 0) for key in (
                 "selected", "completed", "detections", "ocr_incomplete",
-                "failed", "not_scanned", "skipped",
-            ))
+                "failed", "not_scanned",
+            )),
+            len(excluded),
         ),
         "",
     ]
@@ -97,12 +101,10 @@ def render(report, *, detail="full"):
         lines += ["### Errors", "", *(f"- {error}" for error in errors), ""]
     if files and detail == "full":
         lines += ["### Selected images", "", *file_table(files), ""]
-    skipped = report.get("skipped", [])
-    if skipped and detail == "full":
-        lines += [f"<details><summary>Skipped inputs ({len(skipped)})</summary>", ""]
-        for item in skipped:
-            rule = f" (rule {text(item['rule'])})" if item.get("rule") else ""
-            lines.append(f"- {text(display_path(item['path']))}: {text(item.get('reason', ''))}{rule}")
+    if excluded and detail == "full":
+        lines += [f"<details><summary>Excluded by your rules ({len(excluded)})</summary>", ""]
+        for item in excluded:
+            lines.append(f"- {text(display_path(item['path']))} (rule {text(item.get('rule', ''))})")
         lines += ["", "</details>", ""]
     if detail != "full":
         lines += ["The full results are too long to show here; see the JSON report.", ""]
