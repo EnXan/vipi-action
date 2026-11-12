@@ -111,7 +111,7 @@ class SummaryTest(unittest.TestCase):
         compact = render(report(files, exit_code=1), limit=len(full.encode()) - 1)
         self.assertNotIn("### Selected images", compact)
         self.assertIn("bad\\.png", compact)
-        self.assertIn("too long for a job summary", compact)
+        self.assertIn("too long to show here", compact)
         counts = render(report(files, exit_code=1), limit=300)
         self.assertNotIn("### Findings", counts)
 

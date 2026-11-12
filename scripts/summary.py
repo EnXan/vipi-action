@@ -105,7 +105,7 @@ def render(report, *, detail="full"):
             lines.append(f"- {text(display_path(item['path']))}: {text(item.get('reason', ''))}{rule}")
         lines += ["", "</details>", ""]
     if detail != "full":
-        lines += ["The full results are too long for a job summary; see the JSON report.", ""]
+        lines += ["The full results are too long to show here; see the JSON report.", ""]
     lines += ["OCR text is not shown here; it is in the JSON report.", ""]
     return "\n".join(lines)
 

@@ -45,6 +45,14 @@ inputs:
     description: JSON report path relative to the caller repository
     required: false
     default: vipi-report.json
+  pr-comment:
+    description: Also post the scan summary as a pull request comment, updated on each run (true or false); needs pull-requests write permission
+    required: false
+    default: "false"
+  github-token:
+    description: Token for the pull request comment
+    required: false
+    default: ${{ github.token }}
   vipi-version:
     description: vipi-scanner release from PyPI; the default is the release tested with this Action version
     required: false
@@ -75,7 +83,7 @@ runs:
         VIPI_REF: ${{ inputs.vipi-ref }}
       run: |
         venv="$RUNNER_TEMP/vipi-venv"
-        uv venv --quiet --python 3.12 "$venv"
+        uv venv --quiet --clear --python 3.12 "$venv"
         if [[ -d "$venv/Scripts" ]]; then bin="$venv/Scripts"; else bin="$venv/bin"; fi
         if [[ -n "$VIPI_REF" ]]; then
           source="vipi-scanner @ git+https://github.com/EnXan/VIPI@$VIPI_REF"
@@ -237,3 +245,15 @@ runs:
         python="${VIPI_PYTHON:-python3}"
         "$python" "$GITHUB_ACTION_PATH/scripts/summary.py" "$VIPI_REPORT_PATH" >> "$GITHUB_STEP_SUMMARY" \
           || echo "::warning title=VIPI::Could not write the job summary."
+
+    # Optional; a failure only warns, so it never changes the scan result.
+    - name: Comment on pull request
+      if: always() && inputs.pr-comment == 'true'
+      shell: bash
+      env:
+        VIPI_REPORT_PATH: ${{ inputs.report-path }}
+        GITHUB_TOKEN: ${{ inputs.github-token }}
+      run: |
+        python="${VIPI_PYTHON:-python3}"
+        "$python" "$GITHUB_ACTION_PATH/scripts/comment.py" "$VIPI_REPORT_PATH" \
+          || echo "::warning title=VIPI::Could not post the PR comment."

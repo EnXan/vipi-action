@@ -144,3 +144,57 @@ jobs:
         with:
           name: cloud-scan-report
           path: ${{ steps.vipi.outputs.report-path }}
+
+  # Posts a real comment on this PR, runs again to check that it is updated
+  # instead of duplicated, then deletes it. Fork PRs cannot comment.
+  pr-comment:
+    name: pr comment
+    if: github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          path: vipi-action
+          persist-credentials: false
+
+      - name: Create fixture repository
+        run: vipi-action/tests/fixture.sh branch-rules
+
+      - name: Run action
+        continue-on-error: true
+        uses: ./vipi-action
+        with:
+          base-ref: main
+          pr-comment: true
+        env:
+          GOOGLE_CLOUD_API_KEY: ""
+          OPENAI_API_KEY: ""
+
+      - name: Run action again
+        continue-on-error: true
+        uses: ./vipi-action
+        with:
+          base-ref: main
+          pr-comment: true
+        env:
+          GOOGLE_CLOUD_API_KEY: ""
+          OPENAI_API_KEY: ""
+
+      - name: Check and delete the comment
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPOSITORY: ${{ github.repository }}
+          NUMBER: ${{ github.event.pull_request.number }}
+        run: |
+          ids=$(gh api "repos/$REPOSITORY/issues/$NUMBER/comments" --paginate \
+            --jq '.[] | select(.body | startswith("<!-- vipi-action-report -->")) | select(.user.type == "Bot") | .id')
+          count=$(printf '%s\n' "$ids" | grep -c . || true)
+          for id in $ids; do gh api -X DELETE "repos/$REPOSITORY/issues/comments/$id"; done
+          if [[ "$count" != 1 ]]; then
+            echo "Expected one VIPI comment, found $count." >&2
+            exit 1
+          fi
+          echo "One VIPI comment was posted and updated."

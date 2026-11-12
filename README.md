@@ -89,6 +89,8 @@ repository. Every input is optional; leave it out to use its default.
 | `detector` | `auto` | Final text detector; `auto` uses the decision model |
 | `threshold` | `80` | Finding score on a 0–100 scale |
 | `report-path` | `vipi-report.json` | JSON report path, also exposed as an output |
+| `pr-comment` | `false` | Also post the summary as a pull request comment (see below) |
+| `github-token` | `github.token` | Token for the pull request comment |
 | `vipi-version` | Tested release | `vipi-scanner` version installed from PyPI |
 | `vipi-ref` | Unset | Testing only: install VIPI from this Git ref of `EnXan/VIPI` |
 
@@ -122,6 +124,24 @@ with its score and threshold, and the skipped inputs. Images whose OCR text
 may be incomplete are marked. OCR text is not shown; it stays in the JSON
 report. File names are escaped, so they cannot change the page.
 
+### Pull request comment
+
+Set `pr-comment: true` to also post the job summary as a comment on the pull
+request. The Action keeps one comment and updates it on every run; it creates
+none while a PR selects no images. Your workflow needs write access to pull
+requests:
+
+```yaml
+permissions:
+  contents: read
+  pull-requests: write
+```
+
+Pull requests from forks only get a read-only token, so they cannot comment;
+the Action then prints a warning and the scan result is unchanged. Comments
+are limited to about 65,000 characters, so large reports show findings and
+errors only.
+
 ## Excluding images
 
 Put a [`.vipiignore`](https://github.com/EnXan/VIPI/blob/main/.vipiignore.example)
@@ -152,6 +172,10 @@ manually:
 
 - **On every run:** an empty diff, rules from the base branch, a rule change on
   the PR branch, and the `exclude` input.
+- **On PRs from this repository:** `pr-comment` posts a real comment, a second
+  run must update it instead of adding one, and the test deletes it again.
+- **Unit tests:** the summary and comment scripts with fixture reports and a
+  fake GitHub API (`tests/test_*.py`).
 - **On pushes and manual runs:** a scan without diff (`base-ref` unset), which
   PR events cannot test because they always compare against the PR base.
 
