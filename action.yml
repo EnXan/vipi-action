@@ -223,4 +223,17 @@ runs:
         done <<< "$VIPI_EXCLUDE"
 
         echo "report-path=$VIPI_REPORT_PATH" >> "$GITHUB_OUTPUT"
+        # The summary must not show an older report if this scan fails before writing.
+        rm -f "$VIPI_REPORT_PATH"
         "$VIPI_EXE" scan "${args[@]}"
+
+    # Runs after a failed scan too; the scan step's result still decides the job.
+    - name: Write job summary
+      if: always()
+      shell: bash
+      env:
+        VIPI_REPORT_PATH: ${{ inputs.report-path }}
+      run: |
+        python="${VIPI_PYTHON:-python3}"
+        "$python" "$GITHUB_ACTION_PATH/scripts/summary.py" "$VIPI_REPORT_PATH" >> "$GITHUB_STEP_SUMMARY" \
+          || echo "::warning title=VIPI::Could not write the job summary."
