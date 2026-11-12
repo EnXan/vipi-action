@@ -114,6 +114,14 @@ missing key ends the scan before OCR with exit code 2 and names the variable.
 | `selected-images` | Number of images selected for scanning |
 | `report-path` | Path to the JSON report, including findings and scan errors |
 
+## Job summary
+
+After every run, including failed ones, the Action writes a summary to the
+job page: the overall result, counts, findings, errors, every selected image
+with its score and threshold, and the skipped inputs. Images whose OCR text
+may be incomplete are marked. OCR text is not shown; it stays in the JSON
+report. File names are escaped, so they cannot change the page.
+
 ## Excluding images
 
 Put a [`.vipiignore`](https://github.com/EnXan/VIPI/blob/main/.vipiignore.example)
