@@ -50,25 +50,62 @@ case.
 > not load its model. Set `modus: local` only on self-hosted or larger
 > runners. Local gated models may need `HF_TOKEN`.
 
-## Inputs
+## Configuration
+
+Everything is set in your workflow file (for example
+`.github/workflows/vipi-scan.yml`), on the step that uses the Action. Inputs go
+under `with:`, provider keys under `env:`, read from your repository secrets
+(**Settings → Secrets and variables → Actions**). You never edit this
+repository. Every input is optional; leave it out to use its default.
+
+```yaml
+      - uses: EnXan/vipi-action@v1
+        with:                          # inputs, see the table below
+          paths: |                     # several values: one per line
+            docs/images
+            assets
+          exclude: |
+            generated/
+            *.webp
+          ocr-provider: mistral
+          decision-provider: jev
+          threshold: 90
+        env:                           # keys of the chosen providers
+          MISTRAL_API_KEY: ${{ secrets.MISTRAL_API_KEY }}
+          TYPESAFE_API_KEY: ${{ secrets.TYPESAFE_API_KEY }}
+```
+
+### Inputs
 
 | Input | Default | Meaning |
 | :-- | :-- | :-- |
-| `paths` | `.` | Newline-separated image files or directories to scan |
-| `base-ref` | Unset | Base branch for non-PR diff scans; PRs always use their actual base branch |
-| `exclude` | Unset | Newline-separated exclusion rules, applied after `.vipiignore` |
+| `paths` | `.` | Image files or directories to scan, one per line |
+| `base-ref` | Unset | Base branch for diff scans outside PRs; PRs always use their actual base branch |
+| `exclude` | Unset | Exclusion rules, one per line, applied after `.vipiignore` |
 | `modus` | `cloud` | Full scan execution: `cloud` or `local` |
-| `ocr-mode` | `quality` | Local profile: `speed`, `balanced` or `quality`; ignored in cloud mode |
 | `ocr-provider` | `google` | Cloud OCR: `google`, `openai` or `mistral`; ignored in local mode |
-| `decision-provider` | Unset | Override the mode's decision model (local `clef-flash`/`d1`, cloud `openai`/`jev`) |
-| `detector` | `auto` | Final text detector |
+| `decision-provider` | Unset | Override the mode's decision model: cloud `openai` (default) or `jev`; local `clef-flash` or `d1` |
+| `ocr-mode` | `quality` | Local profile: `speed`, `balanced` or `quality`; ignored in cloud mode |
+| `detector` | `auto` | Final text detector; `auto` uses the decision model |
 | `threshold` | `80` | Finding score on a 0–100 scale |
 | `report-path` | `vipi-report.json` | JSON report path, also exposed as an output |
 | `vipi-version` | Tested release | `vipi-scanner` version installed from PyPI |
 | `vipi-ref` | Unset | Testing only: install VIPI from this Git ref of `EnXan/VIPI` |
 
-Cloud providers need their own keys as environment variables; see
-[credentials](https://github.com/EnXan/VIPI/blob/main/docs/cli.md#credentials-and-local-models).
+### Provider keys
+
+Set only the keys of the providers you use, under `env:`:
+
+| Provider | Used for | Key |
+| :-- | :-- | :-- |
+| `google` (default OCR) | OCR | `GOOGLE_CLOUD_API_KEY` |
+| `openai` (default decisions) | OCR, review, detection | `OPENAI_API_KEY` |
+| `mistral` | OCR | `MISTRAL_API_KEY` |
+| `jev` | Review, detection | `TYPESAFE_API_KEY` |
+| Local mode | Gated model downloads | `HF_TOKEN` |
+
+The default cloud setup needs `GOOGLE_CLOUD_API_KEY` and `OPENAI_API_KEY`. A
+missing key ends the scan before OCR with exit code 2 and names the variable.
 
 ## Outputs
 
