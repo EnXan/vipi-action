@@ -67,10 +67,10 @@ wires it into GitHub workflows. The design is recorded in VIPI's
 - Add or update a fixture case for every behavior change. Images that should be
   selected run in cloud mode without keys, so they fail before OCR and appear as
   `not_scanned`.
-- `scripts/summary.py` and `scripts/comment.py` use the Python standard library only and is tested with
-  report fixtures in `tests/test_summary.py` and a fake GitHub API in
-  `tests/test_comment.py`. Treat report text (paths,
-  messages) as untrusted and escape it.
+- `scripts/summary.py` and `scripts/comment.py` use the Python standard library
+  only and are tested with report fixtures and a fake GitHub API in
+  `tests/test_summary.py` and `tests/test_comment.py`. Treat report text
+  (paths, messages) as untrusted and escape it.
 - Cases that need a non-PR event (such as `full-scan`) run on pushes and
   manual runs only.
 - To test an unreleased VIPI change, run the workflow manually with `vipi-ref`.
