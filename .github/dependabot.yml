@@ -1,0 +1,8 @@
+version: 2
+
+updates:
+  # Covers .github/workflows and the root action.yml (setup-uv runs in callers' workflows).
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
