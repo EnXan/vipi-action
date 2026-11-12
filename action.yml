@@ -1,0 +1,226 @@
+name: VIPI Visual Prompt Injection Scan
+description: Scan repository images for visual prompt injections with OCR and an injection detector
+author: EnXan
+branding:
+  icon: eye
+  color: purple
+inputs:
+  paths:
+    description: Newline-separated image files or directories to scan
+    required: false
+    default: .
+  base-ref:
+    description: Optional base branch for non-PR diff scans; PRs always use their actual base branch
+    required: false
+    default: ""
+  exclude:
+    description: Newline-separated exclusion rules, applied after .vipiignore (diff scans read it from the base branch)
+    required: false
+    default: ""
+  modus:
+    description: Full scan execution (local or cloud)
+    required: false
+    default: local
+  ocr-mode:
+    description: Local OCR profile (speed, balanced or quality); ignored in cloud mode
+    required: false
+    default: quality
+  ocr-provider:
+    description: Cloud OCR provider (google, openai, mistral); ignored in local mode
+    required: false
+    default: google
+  decision-provider:
+    description: Optional decision model override (local clef-flash/d1, cloud openai/jev)
+    required: false
+    default: ""
+  detector:
+    description: Injection detector (auto selects the decision model for the mode)
+    required: false
+    default: auto
+  threshold:
+    description: Finding threshold on a 0–100 score scale
+    required: false
+    default: "80"
+  report-path:
+    description: JSON report path relative to the caller repository
+    required: false
+    default: vipi-report.json
+  vipi-version:
+    description: vipi-scanner release from PyPI; the default is the release tested with this Action version
+    required: false
+    default: "0.10.0"
+  vipi-ref:
+    description: For testing only; install vipi-scanner from this Git ref of EnXan/VIPI instead of PyPI
+    required: false
+    default: ""
+outputs:
+  selected-images:
+    description: Number of images selected for scanning
+    value: ${{ steps.select.outputs.images }}
+  report-path:
+    description: Path to the JSON report, including findings and scan errors
+    value: ${{ steps.scan.outputs.report-path }}
+runs:
+  using: composite
+  steps:
+    - name: Install uv
+      uses: astral-sh/setup-uv@68559e99cc807c1eb7e9238fd43a15bba460eec2 # v10.3.3
+      with:
+        enable-cache: false
+
+    - name: Install VIPI with OCR
+      shell: bash
+      env:
+        VIPI_VERSION: ${{ inputs.vipi-version }}
+        VIPI_REF: ${{ inputs.vipi-ref }}
+      run: |
+        venv="$RUNNER_TEMP/vipi-venv"
+        uv venv --quiet --python 3.12 "$venv"
+        if [[ -d "$venv/Scripts" ]]; then bin="$venv/Scripts"; else bin="$venv/bin"; fi
+        if [[ -n "$VIPI_REF" ]]; then
+          source="vipi-scanner @ git+https://github.com/EnXan/VIPI@$VIPI_REF"
+        else
+          source="vipi-scanner==$VIPI_VERSION"
+        fi
+        # vipi-scanner[ocr] with an exact version or Git ref; the extras step reuses it.
+        package="${source/vipi-scanner/vipi-scanner[ocr]}"
+        uv pip install --quiet --python "$bin/python" "$package"
+        {
+          echo "VIPI_PYTHON=$bin/python"
+          echo "VIPI_EXE=$bin/vipi"
+          echo "VIPI_SOURCE=$source"
+        } >> "$GITHUB_ENV"
+        "$bin/vipi" --help > /dev/null
+        echo "Installed $("$bin/python" -c 'import importlib.metadata as m; print("vipi-scanner", m.version("vipi-scanner"))')"
+
+    - name: Select images
+      id: select
+      shell: bash
+      env:
+        VIPI_PATHS: ${{ inputs.paths }}
+        VIPI_BASE_REF: ${{ inputs.base-ref }}
+        VIPI_EXCLUDE: ${{ inputs.exclude }}
+        XDG_CACHE_HOME: ${{ runner.temp }}/vipi-cache
+      run: |
+        if [[ -z "${VIPI_PATHS//$'\n'/}" ]]; then
+          echo "The paths input must contain at least one path." >&2
+          exit 2
+        fi
+        base_ref="$VIPI_BASE_REF"
+        if [[ "$GITHUB_EVENT_NAME" == "pull_request" || "$GITHUB_EVENT_NAME" == "pull_request_target" ]]; then
+          base_ref="${GITHUB_BASE_REF:-}"
+          if [[ -z "$base_ref" ]]; then
+            echo "Could not determine the pull request base branch." >&2
+            exit 2
+          fi
+        fi
+        diff_ref=""
+        if [[ -n "$base_ref" ]]; then
+          diff_ref="origin/$base_ref"
+        fi
+        echo "diff=$diff_ref" >> "$GITHUB_OUTPUT"
+        # The scanner's own selection decides whether models are prepared.
+        args=()
+        while IFS= read -r path; do
+          [[ -n "$path" ]] && args+=("$path")
+        done <<< "$VIPI_PATHS"
+        args+=(--list-only --output "$RUNNER_TEMP/vipi-selection.json")
+        if [[ -n "$diff_ref" ]]; then
+          args+=(--diff "$diff_ref")
+        fi
+        while IFS= read -r rule; do
+          [[ -n "${rule//[[:space:]]/}" ]] && args+=(--exclude="$rule")
+        done <<< "$VIPI_EXCLUDE"
+        rm -f "$RUNNER_TEMP/vipi-selection.json"
+        # Selection errors fail the scan step with the same message before models load.
+        "$VIPI_EXE" scan "${args[@]}" || true
+        count=0
+        if [[ -f "$RUNNER_TEMP/vipi-selection.json" ]]; then
+          count=$("$VIPI_PYTHON" -c \
+            'import json, sys; print(len(json.load(open(sys.argv[1]))["files"]))' \
+            "$RUNNER_TEMP/vipi-selection.json")
+        fi
+        echo "Selected images: $count"
+        echo "images=$count" >> "$GITHUB_OUTPUT"
+
+    - name: Install local decision dependencies
+      if: inputs.modus == 'local' && steps.select.outputs.images != '0'
+      shell: bash
+      run: |
+        # PyPI's Linux/Windows torch wheels bundle CUDA; install the same pinned
+        # versions from the PyTorch CPU index first, as the VIPI lockfile does.
+        if [[ "$RUNNER_OS" != "macOS" ]]; then
+          pins=$("$VIPI_PYTHON" - <<'PY'
+        import importlib.metadata as metadata
+        for requirement in metadata.requires("vipi-scanner") or []:
+            name, _, marker = requirement.partition(";")
+            if "detector-local" in marker and name.strip().startswith(("torch==", "torchvision==")):
+                print(name.strip())
+        PY
+          )
+          # shellcheck disable=SC2086
+          uv pip install --quiet --python "$VIPI_PYTHON" --index https://download.pytorch.org/whl/cpu $pins
+        fi
+        uv pip install --quiet --python "$VIPI_PYTHON" "${VIPI_SOURCE/vipi-scanner/vipi-scanner[ocr,detector-local]}"
+
+    - name: Prepare scan models
+      if: steps.select.outputs.images != '0'
+      shell: bash
+      env:
+        VIPI_DETECTOR: ${{ inputs.detector }}
+        VIPI_OCR_MODE: ${{ inputs.ocr-mode }}
+        VIPI_MODUS: ${{ inputs.modus }}
+        VIPI_OCR_PROVIDER: ${{ inputs.ocr-provider }}
+        VIPI_DECISION_PROVIDER: ${{ inputs.decision-provider }}
+        XDG_CACHE_HOME: ${{ runner.temp }}/vipi-cache
+      run: |
+        args=(--modus "$VIPI_MODUS" --detector "$VIPI_DETECTOR")
+        if [[ "$VIPI_MODUS" == "local" ]]; then
+          args+=(--ocr-mode "$VIPI_OCR_MODE")
+        else
+          args+=(--ocr-provider "$VIPI_OCR_PROVIDER")
+        fi
+        if [[ -n "$VIPI_DECISION_PROVIDER" ]]; then
+          args+=(--decision-provider "$VIPI_DECISION_PROVIDER")
+        fi
+        "$VIPI_EXE" setup "${args[@]}"
+
+    - name: Scan images
+      id: scan
+      shell: bash
+      env:
+        VIPI_PATHS: ${{ inputs.paths }}
+        VIPI_DIFF: ${{ steps.select.outputs.diff }}
+        VIPI_EXCLUDE: ${{ inputs.exclude }}
+        VIPI_DETECTOR: ${{ inputs.detector }}
+        VIPI_THRESHOLD: ${{ inputs.threshold }}
+        VIPI_OCR_MODE: ${{ inputs.ocr-mode }}
+        VIPI_MODUS: ${{ inputs.modus }}
+        VIPI_OCR_PROVIDER: ${{ inputs.ocr-provider }}
+        VIPI_DECISION_PROVIDER: ${{ inputs.decision-provider }}
+        VIPI_REPORT_PATH: ${{ inputs.report-path }}
+        XDG_CACHE_HOME: ${{ runner.temp }}/vipi-cache
+      run: |
+        paths=()
+        while IFS= read -r path; do
+          [[ -n "$path" ]] && paths+=("$path")
+        done <<< "$VIPI_PATHS"
+
+        args=("${paths[@]}" --modus "$VIPI_MODUS" --detector "$VIPI_DETECTOR" --threshold "$VIPI_THRESHOLD" --output "$VIPI_REPORT_PATH")
+        if [[ "$VIPI_MODUS" == "local" ]]; then
+          args+=(--ocr-mode "$VIPI_OCR_MODE")
+        else
+          args+=(--ocr-provider "$VIPI_OCR_PROVIDER")
+        fi
+        if [[ -n "$VIPI_DECISION_PROVIDER" ]]; then
+          args+=(--decision-provider "$VIPI_DECISION_PROVIDER")
+        fi
+        if [[ -n "$VIPI_DIFF" ]]; then
+          args+=(--diff "$VIPI_DIFF")
+        fi
+        while IFS= read -r rule; do
+          [[ -n "${rule//[[:space:]]/}" ]] && args+=(--exclude="$rule")
+        done <<< "$VIPI_EXCLUDE"
+
+        echo "report-path=$VIPI_REPORT_PATH" >> "$GITHUB_OUTPUT"
+        "$VIPI_EXE" scan "${args[@]}"
