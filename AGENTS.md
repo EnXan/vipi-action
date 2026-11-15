@@ -43,8 +43,11 @@ wires it into GitHub workflows. The design is recorded in VIPI's
 ## Action contract
 
 - `action.yml` is the public interface. Within a major version (`v1`), do not
-  remove or rename inputs or outputs, change defaults or change exit codes;
-  such changes need a new major version.
+  remove or rename inputs or outputs, change exit codes or change a default in
+  a way that changes the result of a scan with default inputs; such changes
+  need a new major version. A default change that affects only non-default
+  inputs may ship in a minor release if the release notes say how to keep the
+  old behavior ([VIPI ADR 0076](https://github.com/EnXan/VIPI/blob/main/adr-code/0076-action-threshold-follows-detector-default.md)).
 - Keep the README's input, output and provider key tables in sync with
   `action.yml` in the same pull request.
 - Treat every input as untrusted. Pass inputs and GitHub context values to

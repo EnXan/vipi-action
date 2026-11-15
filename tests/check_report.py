@@ -42,6 +42,11 @@ for name, verdict in verdicts.items():
         failures.append(f"{name} verdict {actual!r} != {verdict!r}")
 if verdicts and report.get("exit_code") != 1:
     failures.append(f"exit code {report.get('exit_code')} != 1")
+# An unset threshold input leaves VIPI's default (80 for the cloud detector);
+# exclude-input passes 90 explicitly.
+threshold = 90 if case == "exclude-input" else 80
+if report.get("threshold") != threshold:
+    failures.append(f"threshold {report.get('threshold')!r} != {threshold}")
 if case == "base-rules" and user_skips[0]["source"] != "origin/main:.vipiignore":
     failures.append(f"rule source {user_skips[0]['source']!r}")
 if failures:
