@@ -38,9 +38,9 @@ inputs:
     required: false
     default: auto
   threshold:
-    description: Finding threshold on a 0–100 score scale
+    description: Finding threshold on a 0–100 score scale; empty uses VIPI's default for the detector
     required: false
-    default: "80"
+    default: ""
   report-path:
     description: JSON report path relative to the caller repository
     required: false
@@ -56,7 +56,7 @@ inputs:
   vipi-version:
     description: vipi-scanner release from PyPI; the default is the release tested with this Action version
     required: false
-    default: "0.10.0"
+    default: "0.11.0"
   vipi-ref:
     description: For testing only; install vipi-scanner from this Git ref of EnXan/VIPI instead of PyPI
     required: false
@@ -214,7 +214,10 @@ runs:
           [[ -n "$path" ]] && paths+=("$path")
         done <<< "$VIPI_PATHS"
 
-        args=("${paths[@]}" --modus "$VIPI_MODUS" --detector "$VIPI_DETECTOR" --threshold "$VIPI_THRESHOLD" --output "$VIPI_REPORT_PATH")
+        args=("${paths[@]}" --modus "$VIPI_MODUS" --detector "$VIPI_DETECTOR" --output "$VIPI_REPORT_PATH")
+        if [[ -n "$VIPI_THRESHOLD" ]]; then
+          args+=(--threshold "$VIPI_THRESHOLD")
+        fi
         if [[ "$VIPI_MODUS" == "local" ]]; then
           args+=(--ocr-mode "$VIPI_OCR_MODE")
         else

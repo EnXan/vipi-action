@@ -87,7 +87,7 @@ repository. Every input is optional; leave it out to use its default.
 | `decision-provider` | Unset | Override the mode's decision model: cloud `openai` (default) or `jev`; local `clef-flash` or `d1` |
 | `ocr-mode` | `quality` | Local profile: `speed`, `balanced` or `quality`; ignored in cloud mode |
 | `detector` | `auto` | Final text detector; `auto` uses the decision model |
-| `threshold` | `80` | Finding score on a 0–100 scale |
+| `threshold` | Unset | Finding score on a 0–100 scale; unset uses VIPI's default for the detector (80 for the cloud detectors) |
 | `report-path` | `vipi-report.json` | JSON report path, also exposed as an output |
 | `pr-comment` | `false` | Also post the summary as a pull request comment (see below) |
 | `github-token` | `github.token` | Token for the pull request comment |
