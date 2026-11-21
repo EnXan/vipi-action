@@ -16,6 +16,8 @@ expected = {
     # Remaining images run in cloud mode without keys: not scanned, exit 2.
     "branch-rules": ({"added.png": "not_scanned"}, 0, "failure"),
     "exclude-input": ({"keep.png": "not_scanned"}, 1, "failure"),
+    # vipi-scanner 0.14 selects SVG files like images.
+    "svg": ({"diagram.svg": "not_scanned"}, 0, "failure"),
     "full-scan": ({"base.png": "not_scanned", "added.png": "not_scanned"}, 2, "failure"),
     # Real cloud scan: a detection makes the scan step fail with exit code 1.
     "cloud-scan": ({"injection.png": "completed", "benign.png": "completed"}, 0, "failure"),
