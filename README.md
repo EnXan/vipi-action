@@ -1,8 +1,9 @@
 # VIPI Visual Prompt Injection Scan
 
 GitHub Action for [VIPI](https://github.com/EnXan/VIPI): scans repository
-images for visual prompt injections. It reads the text in each image with OCR,
-re-reads unclear images, and checks the final text with an injection detector.
+images (PNG, JPEG, WebP and SVG) for visual prompt injections. It reads the text
+in each image with OCR, re-reads unclear images, and checks the final text with
+an injection detector; for an SVG file it also checks the file's source text.
 A finding fails the job.
 
 ## Usage
@@ -24,7 +25,7 @@ jobs:
       - uses: actions/checkout@v7
         with:
           fetch-depth: 0
-      - uses: EnXan/vipi-action@v1
+      - uses: EnXan/vipi-action@v2
         env:
           GOOGLE_CLOUD_API_KEY: ${{ secrets.GOOGLE_CLOUD_API_KEY }}
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
@@ -59,7 +60,7 @@ under `with:`, provider keys under `env:`, read from your repository secrets
 repository. Every input is optional; leave it out to use its default.
 
 ```yaml
-      - uses: EnXan/vipi-action@v1
+      - uses: EnXan/vipi-action@v2
         with:                          # inputs, see the table below
           paths: |                     # several values: one per line
             docs/images
@@ -152,6 +153,11 @@ change to the file applies after it is merged. The `exclude` input comes from
 the workflow file, which `pull_request` events take from the PR itself. See
 [excluding images](https://github.com/EnXan/VIPI/blob/main/docs/cli.md#excluding-images).
 
+Each SVG file costs one OCR run plus detector checks of its rendered and source
+text. To skip SVG files, for example a large icon set, add `*.svg` (or the icon
+folder) to `.vipiignore` or `exclude`. How SVG files are read and rendered is in
+[SVG files](https://github.com/EnXan/VIPI/blob/main/docs/cli.md#svg-files).
+
 ## How it works
 
 The Action installs a pinned `vipi-scanner` release from PyPI into an isolated
@@ -161,9 +167,13 @@ Local mode installs the CPU builds of PyTorch on Linux and Windows.
 
 ## Versions
 
-Use `@v1`; it moves to each compatible release. Each Action release pins one
+Use `@v2`; it moves to each compatible release. Each Action release pins one
 tested `vipi-scanner` version. `vipi-version` lets you choose another release
 at your own risk.
+
+`v2` pins `vipi-scanner` 0.14.1, which also scans SVG files. Because that
+changes which files a scan with default inputs selects, it is a new major
+version. `v1` stays on `vipi-scanner` 0.13.0 and does not scan SVG files.
 
 ## Development
 
@@ -192,7 +202,7 @@ Run the workflow manually (**Actions → Test action → Run workflow**) with:
   `GOOGLE_CLOUD_API_KEY` and `OPENAI_API_KEY`.
 
 Release: bump `vipi-version`'s default to the new PyPI release, let the tests
-pass, tag `vX.Y.Z` and move `v1`.
+pass, tag `vX.Y.Z` and move `v2`.
 
 ## License
 
