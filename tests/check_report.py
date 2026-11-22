@@ -27,6 +27,8 @@ verdicts = {
 }.get(case, {})
 
 failures = []
+if report.get("evidence_scope") != "final_ocr_with_image_check":
+    failures.append(f"cloud evidence scope {report.get('evidence_scope')!r}")
 if files != expected[0]:
     failures.append(f"files {files} != {expected[0]}")
 if len(user_skips) != expected[1]:
