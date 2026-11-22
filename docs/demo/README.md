@@ -10,21 +10,24 @@ Google Cloud Vision and OpenAI). The PR adds three images:
 `benign.png` from this repository's [test images](../../tests/images).
 
 Captured on 2026-11-22 from workflow run
-[45006825163](https://github.com/EnXan/vipi-action-demo/actions/runs/45006825163)
-(vipi-action `v2`, vipi-scanner 0.14.1):
+[45006825163](https://github.com/EnXan/vipi-action-demo/actions/runs/45006825163):
 
 - `pr-scroll.gif`: a scripted scroll through the PR page, signed out, from the
   top to the VIPI comment (11 screenshots, about 6 seconds; not a screen
   recording, so nothing is cut);
-- `pr-checks.png`: the PR's checks with the failing VIPI scan;
-- `pr-comment.png`: the comment the Action posted on the PR.
+- `pr-checks.png`: the PR's checks with the failing VIPI scan (first attempt,
+  vipi-action v2.0.0);
+- `pr-comment.png`: the comment the Action posted on the PR (second attempt,
+  re-run with vipi-action v2.1.0, which leaves images without findings out of
+  the comment).
 
+Both attempts used vipi-scanner 0.14.1 and gave the same verdicts.
 The PR first added VIPI's `clean.png`, which the first run
 ([45006701016](https://github.com/EnXan/vipi-action-demo/actions/runs/45006701016))
 reported as an injection (score 89, threshold 80); it was replaced with
 `benign.png` and the run repeated. Screenshots are cropped, not edited.
 
-To reproduce: push a commit to the demo PR (needs the repository secrets
+To reproduce: push a commit to the demo PR or re-run its latest workflow run (needs the repository secrets
 `GOOGLE_CLOUD_API_KEY` and `OPENAI_API_KEY`; about $0.01 per run), wait for
 the run, then:
 
