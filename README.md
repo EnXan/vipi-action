@@ -16,7 +16,7 @@ the check and the Action comments on the PR (`pr-comment: true`):
 
 ![Pull request checks: "Some checks were not successful", 1 failing and 1 successful check; "VIPI image scan / scan (pull_request)" is failing after 17s, GitGuardian Security Checks passed](docs/demo/pr-checks.png)
 
-![VIPI pull request comment: "VIPI scan: Injection detected", 3 images selected, 2 detections; hidden-injection.png and visible-injection.png scored 100 against threshold 80, benign.png scored 0 with no injection detected](docs/demo/pr-comment.png)
+![VIPI pull request comment: "VIPI scan: Injection detected", 3 images selected, 2 detections; hidden-injection.png and visible-injection.png scored 100 against threshold 80; "1 image without findings is listed in the job summary"](docs/demo/pr-comment.png)
 
 Screenshots and a scripted scroll through the PR page of an actual run,
 cropped but not edited; how they were made is in
