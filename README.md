@@ -6,6 +6,22 @@ in each image with OCR, re-reads unclear images, and checks the final text with
 an injection detector; for an SVG file it also checks the file's source text.
 A finding fails the job.
 
+## Demo
+
+A [real pull request](https://github.com/EnXan/vipi-action-demo/pull/1) that
+adds two images with a prompt injection and one benign image. The scan fails
+the check and the Action comments on the PR (`pr-comment: true`):
+
+![Scrolling through the demo pull request "Add sample images": the commits carry a red failure mark, and the github-actions comment reads "VIPI scan: Injection detected" with 2 detections out of 3 selected images](docs/demo/pr-scroll.gif)
+
+![Pull request checks: "Some checks were not successful", 1 failing and 1 successful check; "VIPI image scan / scan (pull_request)" is failing after 17s, GitGuardian Security Checks passed](docs/demo/pr-checks.png)
+
+![VIPI pull request comment: "VIPI scan: Injection detected", 3 images selected, 2 detections; hidden-injection.png and visible-injection.png scored 100 against threshold 80, benign.png scored 0 with no injection detected](docs/demo/pr-comment.png)
+
+Screenshots and a scripted scroll through the PR page of an actual run,
+cropped but not edited; how they were made is in
+[docs/demo](docs/demo/README.md).
+
 ## Usage
 
 Scan the images a pull request adds or changes. The default cloud mode uses
