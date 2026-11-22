@@ -1,7 +1,8 @@
 """Post or update the scan summary as a pull request comment (standard library only).
 
 Usage: python comment.py REPORT_PATH
-Environment: GITHUB_TOKEN, GITHUB_API_URL, GITHUB_REPOSITORY, GITHUB_EVENT_PATH.
+Environment: GITHUB_TOKEN, GITHUB_API_URL, GITHUB_REPOSITORY, GITHUB_EVENT_PATH,
+GITHUB_SERVER_URL and GITHUB_RUN_ID (link to the job summary).
 A failure only prints a workflow warning; it never changes the scan result.
 """
 
@@ -18,6 +19,8 @@ import summary  # noqa: E402
 MARKER = "<!-- vipi-action-report -->"
 # Reported limit for comment bodies: 65,536 characters; bytes bound characters.
 COMMENT_LIMIT_BYTES = 65536 - len(MARKER) - 2
+# The comment leaves images without findings to the job summary.
+COMMENT_VIEWS = ("short", "compact", "counts")
 
 
 def github_api(method, url, token, payload=None):
@@ -39,6 +42,14 @@ def github_api(method, url, token, payload=None):
 def pull_request_number(event_path):
     event = json.loads(Path(event_path).read_text(encoding="utf-8"))
     return (event.get("pull_request") or {}).get("number")
+
+
+def run_url(environ):
+    run_id = environ.get("GITHUB_RUN_ID")
+    if not run_id:
+        return None
+    server = environ.get("GITHUB_SERVER_URL", "https://github.com")
+    return f"{server}/{environ['GITHUB_REPOSITORY']}/actions/runs/{run_id}"
 
 
 def has_results(report_path):
@@ -83,7 +94,13 @@ def post(report_path, environ, api=github_api):
         return "notice", "pr-comment only applies to pull request events."
     token = environ["GITHUB_TOKEN"]
     base = f"{environ.get('GITHUB_API_URL', 'https://api.github.com')}/repos/{environ['GITHUB_REPOSITORY']}"
-    body = f"{MARKER}\n{summary.main(['summary.py', report_path], limit=COMMENT_LIMIT_BYTES)}"
+    text = summary.main(
+        ["summary.py", report_path],
+        limit=COMMENT_LIMIT_BYTES,
+        views=COMMENT_VIEWS,
+        run_url=run_url(environ),
+    )
+    body = f"{MARKER}\n{text}"
     if update_own_comment(api, base, number, token, body):
         return "notice", f"Updated the VIPI comment on pull request #{number}."
     if not has_results(report_path):
