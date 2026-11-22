@@ -119,15 +119,25 @@ class CommentTest(unittest.TestCase):
         self.assertIn("::warning", log)
         self.assertIn("pull-requests: write", log)
 
-    def test_body_respects_comment_limit(self):
-        files = [{"path": f"image-{i}-{'x' * 200}.png", "status": "completed",
+    def test_comment_lists_only_findings_and_links_the_job_summary(self):
+        clean = [{"path": f"image-{i}.png", "status": "completed",
                   "verdict": "no_injection_detected", "injection_probability": 0.0,
-                  "threshold": 0.8} for i in range(1000)]
+                  "threshold": 0.8} for i in range(3)]
+        self.env.update({"GITHUB_SERVER_URL": "https://github.test", "GITHUB_RUN_ID": "42"})
+        api = FakeApi()
+        self.run_main(self.report([*self.finding(), *clean]), api)
+        body = api.comments[0]["body"]
+        self.assertIn("bad\\.png", body)
+        self.assertNotIn("image\\-0", body)
+        self.assertIn("[job summary](https://github.test/owner/repo/actions/runs/42)", body)
+
+    def test_body_respects_comment_limit(self):
+        files = [{"path": f"image-{i}-{'x' * 200}.png", "status": "not_scanned"}
+                 for i in range(1000)]
         api = FakeApi()
         self.run_main(self.report(files), api)
         self.assertLessEqual(len(api.comments[0]["body"]), 65536)
         self.assertIn("too long to show here", api.comments[0]["body"])
-
 
 if __name__ == "__main__":
     unittest.main()

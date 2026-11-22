@@ -115,6 +115,34 @@ class SummaryTest(unittest.TestCase):
         self.assertNotIn("\n## heading", output)
         self.assertIn("a\\|b\\*c\\`d ⏎ \\#\\# heading &lt;img", row)
 
+    def test_short_view_lists_findings_and_problems_but_not_clean_images(self):
+        files = [
+            scanned("bad.png", "injection_detected", 1.0),
+            scanned("doubt.png", "no_injection_detected", 0.1, ocr_incomplete=True),
+            {"path": "/work/repo/skipped.png", "status": "not_scanned"},
+            scanned("logo.png", "no_injection_detected", 0.0),
+            scanned("icon.png", "no_injection_detected", 0.0),
+        ]
+        output = render(report(files, exit_code=1), views=("short",),
+                        run_url="https://github.test/o/r/actions/runs/5")
+        self.assertIn("### Findings", output)
+        self.assertNotIn("### Selected images", output)
+        check = output.split("### Images to check")[1].split("###")[0]
+        self.assertIn("doubt\\.png", check)
+        self.assertIn("skipped\\.png", check)
+        self.assertNotIn("bad\\.png", check)
+        self.assertNotIn("logo", output)
+        self.assertIn("2 images without findings are listed in the "
+                      "[job summary](https://github.test/o/r/actions/runs/5).", output)
+
+    def test_short_view_of_a_clean_scan_without_run_url(self):
+        output = render(report([scanned("logo.png", "no_injection_detected", 0.0)], exit_code=0),
+                        views=("short",))
+        self.assertIn("## VIPI scan: ✅ No injection detected", output)
+        self.assertNotIn("logo", output)
+        self.assertNotIn("### Images to check", output)
+        self.assertIn("1 image without findings is listed in the job summary.", output)
+
     def test_large_report_falls_back_to_shorter_views(self):
         files = [scanned(f"image-{index}.png", "no_injection_detected", 0.0) for index in range(200)]
         files.append(scanned("bad.png", "injection_detected", 1.0))

@@ -70,7 +70,22 @@ def file_table(files):
     return rows
 
 
-def render(report, *, detail="full"):
+def needs_check(item):
+    """Not a finding, but its result may be incomplete."""
+    return item.get("verdict") != "injection_detected" and (
+        item.get("status") != "completed" or item.get("ocr_incomplete") is True
+    )
+
+
+def clean_line(count, run_url):
+    """Point to the job summary for images without findings (short view)."""
+    images = "1 image without findings is" if count == 1 else f"{count} images without findings are"
+    where = f"[job summary]({run_url})" if run_url else "job summary"
+    return f"{images} listed in the {where}."
+
+
+def render(report, *, detail="full", run_url=None):
+    """detail: full (job summary), short (PR comment), compact or counts (size fallbacks)."""
     summary = report.get("summary", {})
     files = report.get("files", [])
     headline = HEADLINES.get(report.get("exit_code"), "⚠️ Unknown result")
@@ -101,18 +116,25 @@ def render(report, *, detail="full"):
         lines += ["### Errors", "", *(f"- {error}" for error in errors), ""]
     if files and detail == "full":
         lines += ["### Selected images", "", *file_table(files), ""]
+    if detail == "short":
+        to_check = [item for item in files if needs_check(item)]
+        if to_check:
+            lines += ["### Images to check", "", *file_table(to_check), ""]
+        clean = len(files) - len(findings) - len(to_check)
+        if clean:
+            lines += [clean_line(clean, run_url), ""]
     if excluded and detail == "full":
         lines += [f"<details><summary>Excluded by your rules ({len(excluded)})</summary>", ""]
         for item in excluded:
             lines.append(f"- {text(display_path(item['path']))} (rule {text(item.get('rule', ''))})")
         lines += ["", "</details>", ""]
-    if detail != "full":
+    if detail in ("compact", "counts"):
         lines += ["The full results are too long to show here; see the JSON report.", ""]
     lines += ["OCR text is not shown here; it is in the JSON report.", ""]
     return "\n".join(lines)
 
 
-def main(argv, *, limit=SUMMARY_LIMIT_BYTES):
+def main(argv, *, limit=SUMMARY_LIMIT_BYTES, views=("full", "compact", "counts"), run_url=None):
     path = Path(argv[1])
     try:
         report = json.loads(path.read_text(encoding="utf-8"))
@@ -121,8 +143,8 @@ def main(argv, *, limit=SUMMARY_LIMIT_BYTES):
             "## VIPI scan: ⚠️ No report\n\n"
             f"The scan stopped before writing {text(path)}. See the step log.\n"
         )
-    for detail in ("full", "compact", "counts"):
-        output = render(report, detail=detail)
+    for detail in views:
+        output = render(report, detail=detail, run_url=run_url)
         if len(output.encode("utf-8")) <= limit:
             return output
     return output

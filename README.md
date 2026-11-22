@@ -144,10 +144,12 @@ report. File names are escaped, so they cannot change the page.
 
 ### Pull request comment
 
-Set `pr-comment: true` to also post the job summary as a comment on the pull
-request. The Action keeps one comment and updates it on every run; it creates
-none while a PR selects no images. Your workflow needs write access to pull
-requests:
+Set `pr-comment: true` to also post a short summary as a comment on the pull
+request: the counts, findings, errors and images whose result may be
+incomplete. Images without findings are only counted, with a link to the job
+summary that lists them. The Action keeps one comment and updates it on every
+run; it creates none while a PR selects no images. Your workflow needs write
+access to pull requests:
 
 ```yaml
 permissions:
