@@ -3,8 +3,9 @@
 GitHub Action for [VIPI](https://github.com/EnXan/VIPI): scans repository
 images (PNG, JPEG, WebP and SVG) for visual prompt injections. It reads the text
 in each image with OCR, re-reads unclear images, and checks the final text with
-an injection detector; for an SVG file it also checks the file's source text.
-A finding fails the job.
+an injection detector. An SVG scan also checks the file's source text. In cloud
+mode, the same detector checks the whole image when the text check finds no
+injection. A finding fails the job.
 
 ## Demo
 
@@ -41,7 +42,7 @@ jobs:
       - uses: actions/checkout@v7
         with:
           fetch-depth: 0
-      - uses: EnXan/vipi-action@v2
+      - uses: EnXan/vipi-action@v3
         env:
           GOOGLE_CLOUD_API_KEY: ${{ secrets.GOOGLE_CLOUD_API_KEY }}
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
@@ -76,7 +77,7 @@ under `with:`, provider keys under `env:`, read from your repository secrets
 repository. Every input is optional; leave it out to use its default.
 
 ```yaml
-      - uses: EnXan/vipi-action@v2
+      - uses: EnXan/vipi-action@v3
         with:                          # inputs, see the table below
           paths: |                     # several values: one per line
             docs/images
@@ -103,12 +104,12 @@ repository. Every input is optional; leave it out to use its default.
 | `ocr-provider` | `google` | Cloud OCR: `google`, `openai` or `mistral`; ignored in local mode |
 | `decision-provider` | Unset | Override the mode's decision model: cloud `openai` (default) or `jev`; local `clef-flash` or `d1` |
 | `ocr-mode` | `quality` | Local profile: `speed`, `balanced` or `quality`; ignored in cloud mode |
-| `detector` | `auto` | Final text detector; `auto` uses the decision model |
+| `detector` | `auto` | Injection detector. `auto` uses the decision model, including for the whole-image check in cloud mode |
 | `threshold` | Unset | Finding score on a 0–100 scale; unset uses VIPI's default for the detector (80 for the cloud detectors) |
 | `report-path` | `vipi-report.json` | JSON report path, also exposed as an output |
 | `pr-comment` | `false` | Also post the summary as a pull request comment (see below) |
 | `github-token` | `github.token` | Token for the pull request comment |
-| `vipi-version` | Tested release | `vipi-scanner` version installed from PyPI |
+| `vipi-version` | `0.15.0` | `vipi-scanner` version installed from PyPI |
 | `vipi-ref` | Unset | Testing only: install VIPI from this Git ref of `EnXan/VIPI` |
 
 ### Provider keys
@@ -171,8 +172,9 @@ change to the file applies after it is merged. The `exclude` input comes from
 the workflow file, which `pull_request` events take from the PR itself. See
 [excluding images](https://github.com/EnXan/VIPI/blob/main/docs/cli.md#excluding-images).
 
-Each SVG file costs one OCR run plus detector checks of its rendered and source
-text. To skip SVG files, for example a large icon set, add `*.svg` (or the icon
+Each SVG file runs OCR and detector checks of its rendered and source text.
+Cloud scans also make a billable image request when neither text check finds an
+injection. To skip SVG files, for example a large icon set, add `*.svg` (or the icon
 folder) to `.vipiignore` or `exclude`. How SVG files are read and rendered is in
 [SVG files](https://github.com/EnXan/VIPI/blob/main/docs/cli.md#svg-files).
 
@@ -185,13 +187,16 @@ Local mode installs the CPU builds of PyTorch on Linux and Windows.
 
 ## Versions
 
-Use `@v2`; it moves to each compatible release. Each Action release pins one
-tested `vipi-scanner` version. `vipi-version` lets you choose another release
-at your own risk.
+Use `@v3` for releases with the whole-image check in cloud mode. Its initial
+release pins `vipi-scanner` 0.15.0. The extra check can change findings and
+adds a billable detection request for images without a text finding, so it
+ships in a new Action major. Use `@v2` for the previous cloud scan behavior
+with `vipi-scanner` 0.14.1. `@v1` pins `vipi-scanner` 0.13.0, before SVG support.
 
-`v2` pins `vipi-scanner` 0.14.1, which also scans SVG files. Because that
-changes which files a scan with default inputs selects, it is a new major
-version. `v1` stays on `vipi-scanner` 0.13.0 and does not scan SVG files.
+`vipi-version` lets you choose an explicit scanner release. See
+[VIPI ADR 0081](https://github.com/EnXan/VIPI/blob/main/adr-code/0081-direct-cloud-image-detection.md)
+for the image check and [ADR 0076](https://github.com/EnXan/VIPI/blob/main/adr-code/0076-action-threshold-follows-detector-default.md)
+for the Action's major-version policy.
 
 ## Development
 
@@ -208,8 +213,8 @@ manually:
 - **On pushes and manual runs:** a scan without diff (`base-ref` unset), which
   PR events cannot test because they always compare against the PR base.
 
-Images that remain run in cloud mode without keys, so they fail before OCR and
-the test checks the report.
+Images that remain run in cloud mode without keys, so they fail before OCR.
+The fixture verifies selection, the report and the cloud evidence scope.
 
 Run the workflow manually (**Actions → Test action → Run workflow**) with:
 
@@ -220,7 +225,7 @@ Run the workflow manually (**Actions → Test action → Run workflow**) with:
   `GOOGLE_CLOUD_API_KEY` and `OPENAI_API_KEY`.
 
 Release: bump `vipi-version`'s default to the new PyPI release, let the tests
-pass, tag `vX.Y.Z` and move `v2`.
+pass, tag `vX.Y.Z` and set the matching major alias.
 
 ## License
 

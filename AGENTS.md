@@ -42,7 +42,7 @@ wires it into GitHub workflows. The design is recorded in VIPI's
 
 ## Action contract
 
-- `action.yml` is the public interface. Within a major version (`v2`), do not
+- `action.yml` is the public interface. Within a major version, do not
   remove or rename inputs or outputs, change exit codes or change a default in
   a way that changes the result of a scan with default inputs; such changes
   need a new major version. A default change that affects only non-default
@@ -97,15 +97,16 @@ wires it into GitHub workflows. The design is recorded in VIPI's
    request, and let the tests pass.
 3. After merging, tag `vX.Y.Z` (patch: fixes or a new VIPI patch; minor: new
    inputs, outputs or behavior), create the GitHub release, and move the
-   current major tag (`v2`; `v1` stays on `v1.3.2`):
+   corresponding major tag. The initial `v3.0.0` release creates `v3`.
+   `v2` stays on the last compatible v2 release and `v1` stays on `v1.3.2`:
 
 ```bash
 git switch main
 git pull --ff-only
-git tag -a v2.1.0 -m "Release v2.1.0"
-git tag -fa v2 -m "v2 → v2.1.0"
-git push origin v2.1.0
-git push --force origin v2
+git tag -a v3.0.0 -m "Release v3.0.0"
+git tag -a v3 -m "v3 → v3.0.0"
+git push origin v3.0.0 v3
 ```
 
-Moving the major tag is the only allowed force push. Never move a `vX.Y.Z` tag.
+For later compatible releases, moving the major tag is the only allowed
+force push. Never move a `vX.Y.Z` tag.
