@@ -3,9 +3,11 @@
 GitHub Action for [VIPI](https://github.com/EnXan/VIPI): scans repository
 images (PNG, JPEG, WebP and SVG) for visual prompt injections. It reads the text
 in each image with OCR, re-reads unclear images, and checks the final text with
-an injection detector. An SVG scan also checks the file's source text. In cloud
-mode, the same detector checks the whole image when the text check finds no
-injection. A finding fails the job.
+an injection detector. The text in an image's metadata (EXIF, XMP, PNG text,
+IPTC) and the payloads of QR codes and barcodes are checked as well; an SVG
+scan also checks the file's source text. In cloud mode, the same detector
+checks the whole image when the text check finds no injection. A finding fails
+the job.
 
 ## Demo
 
@@ -42,7 +44,7 @@ jobs:
       - uses: actions/checkout@v7
         with:
           fetch-depth: 0
-      - uses: EnXan/vipi-action@v3
+      - uses: EnXan/vipi-action@v4
         env:
           GOOGLE_CLOUD_API_KEY: ${{ secrets.GOOGLE_CLOUD_API_KEY }}
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
@@ -77,7 +79,7 @@ under `with:`, provider keys under `env:`, read from your repository secrets
 repository. Every input is optional; leave it out to use its default.
 
 ```yaml
-      - uses: EnXan/vipi-action@v3
+      - uses: EnXan/vipi-action@v4
         with:                          # inputs, see the table below
           paths: |                     # several values: one per line
             docs/images
@@ -109,7 +111,7 @@ repository. Every input is optional; leave it out to use its default.
 | `report-path` | `vipi-report.json` | JSON report path, also exposed as an output |
 | `pr-comment` | `false` | Also post the summary as a pull request comment (see below) |
 | `github-token` | `github.token` | Token for the pull request comment |
-| `vipi-version` | `0.15.0` | `vipi-scanner` version installed from PyPI |
+| `vipi-version` | `0.18.0` | `vipi-scanner` version installed from PyPI |
 | `vipi-ref` | Unset | Testing only: install VIPI from this Git ref of `EnXan/VIPI` |
 
 ### Provider keys
@@ -187,16 +189,21 @@ Local mode installs the CPU builds of PyTorch on Linux and Windows.
 
 ## Versions
 
-Use `@v3` for releases with the whole-image check in cloud mode. Its initial
-release pins `vipi-scanner` 0.15.0. The extra check can change findings and
-adds a billable detection request for images without a text finding, so it
-ships in a new Action major. Use `@v2` for the previous cloud scan behavior
-with `vipi-scanner` 0.14.1. `@v1` pins `vipi-scanner` 0.13.0, before SVG support.
+Use `@v4`. Its initial release pins `vipi-scanner` 0.18.0, which also checks
+image metadata and QR and barcode payloads. These checks can change findings
+and add a detector request for each image with metadata text or a decoded
+code, so they ship in a new Action major. Use `@v3` for the previous behavior
+with `vipi-scanner` 0.15.0 (whole-image check in cloud mode, no metadata or
+code checks), `@v2` for `vipi-scanner` 0.14.1 and `@v1` for `vipi-scanner`
+0.13.0, before SVG support.
 
-`vipi-version` lets you choose an explicit scanner release. See
-[VIPI ADR 0081](https://github.com/EnXan/VIPI/blob/main/adr-code/0081-direct-cloud-image-detection.md)
-for the image check and [ADR 0076](https://github.com/EnXan/VIPI/blob/main/adr-code/0076-action-threshold-follows-detector-default.md)
-for the Action's major-version policy.
+`vipi-version` lets you choose an explicit scanner release. VIPI's ADRs
+describe the
+[image check](https://github.com/EnXan/VIPI/blob/main/adr-code/0082-cloud-image-check-without-image-only-scans.md),
+the [metadata check](https://github.com/EnXan/VIPI/blob/main/adr-code/0083-image-metadata-reading.md),
+the [QR and barcode check](https://github.com/EnXan/VIPI/blob/main/adr-code/0084-barcode-reading.md)
+and the Action's
+[major-version policy](https://github.com/EnXan/VIPI/blob/main/adr-code/0076-action-threshold-follows-detector-default.md).
 
 ## Development
 
