@@ -4,10 +4,11 @@ GitHub Action for [VIPI](https://github.com/EnXan/VIPI): scans repository
 images (PNG, JPEG, WebP and SVG) for visual prompt injections. It reads the text
 in each image with OCR, re-reads unclear images, and checks the final text with
 an injection detector. The text in an image's metadata (EXIF, XMP, PNG text,
-IPTC) and the payloads of QR codes and barcodes are checked as well; an SVG
-scan also checks the file's source text. In cloud mode, the same detector
-checks the whole image when the text check finds no injection. A finding fails
-the job.
+IPTC), the payloads of QR codes and barcodes and text hidden in PNG pixels with
+OpenStego are checked as well; an SVG scan also checks the file's source text.
+An image with transparent pixels is also scanned on black and with alpha
+dropped. In cloud mode, the same detector checks the whole image when the text
+check finds no injection. A finding fails the job.
 
 ## Demo
 
@@ -44,7 +45,7 @@ jobs:
       - uses: actions/checkout@v7
         with:
           fetch-depth: 0
-      - uses: EnXan/vipi-action@v4
+      - uses: EnXan/vipi-action@v5
         env:
           GOOGLE_CLOUD_API_KEY: ${{ secrets.GOOGLE_CLOUD_API_KEY }}
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
@@ -68,7 +69,7 @@ case.
 > and too little memory for the local models. In our test, `balanced` took
 > about 9 minutes for two images plus 2 minutes of setup, and `quality` could
 > not load its model. Set `modus: local` only on self-hosted or larger
-> runners. Local gated models may need `HF_TOKEN`.
+> runners. Local mode needs no provider key.
 
 ## Configuration
 
@@ -79,7 +80,7 @@ under `with:`, provider keys under `env:`, read from your repository secrets
 repository. Every input is optional; leave it out to use its default.
 
 ```yaml
-      - uses: EnXan/vipi-action@v4
+      - uses: EnXan/vipi-action@v5
         with:                          # inputs, see the table below
           paths: |                     # several values: one per line
             docs/images
@@ -111,7 +112,7 @@ repository. Every input is optional; leave it out to use its default.
 | `report-path` | `vipi-report.json` | JSON report path, also exposed as an output |
 | `pr-comment` | `false` | Also post the summary as a pull request comment (see below) |
 | `github-token` | `github.token` | Token for the pull request comment |
-| `vipi-version` | `0.18.0` | `vipi-scanner` version installed from PyPI |
+| `vipi-version` | `0.21.0` | `vipi-scanner` version installed from PyPI |
 | `vipi-ref` | Unset | Testing only: install VIPI from this Git ref of `EnXan/VIPI` |
 
 ### Provider keys
@@ -124,7 +125,6 @@ Set only the keys of the providers you use, under `env:`:
 | `openai` (default decisions) | OCR, review, detection | `OPENAI_API_KEY` |
 | `mistral` | OCR | `MISTRAL_API_KEY` |
 | `jev` | Review, detection | `TYPESAFE_API_KEY` |
-| Local mode | Gated model downloads | `HF_TOKEN` |
 
 The default cloud setup needs `GOOGLE_CLOUD_API_KEY` and `OPENAI_API_KEY`. A
 missing key ends the scan before OCR with exit code 2 and names the variable.
@@ -189,19 +189,26 @@ Local mode installs the CPU builds of PyTorch on Linux and Windows.
 
 ## Versions
 
-Use `@v4`. Its initial release pins `vipi-scanner` 0.18.0, which also checks
-image metadata and QR and barcode payloads. These checks can change findings
-and add a detector request for each image with metadata text or a decoded
-code, so they ship in a new Action major. Use `@v3` for the previous behavior
-with `vipi-scanner` 0.15.0 (whole-image check in cloud mode, no metadata or
-code checks), `@v2` for `vipi-scanner` 0.14.1 and `@v1` for `vipi-scanner`
-0.13.0, before SVG support.
+Use `@v5`. Its initial release pins `vipi-scanner` 0.21.0, which also scans
+images with transparent pixels on black and with alpha dropped, and checks
+text hidden in PNG pixels with OpenStego. These checks can change findings;
+the extra views add OCR and detector requests for each distinct view in cloud
+mode, and an OpenStego payload adds a detector request. `detector: prompt-guard` no longer exists; use
+`detector: wolf-defender`, which needs no `HF_TOKEN`. Both changes ship in a
+new Action major. Use `@v4` for the previous behavior with `vipi-scanner`
+0.18.0 (metadata and code checks, no transparency views or OpenStego check), `@v3` for
+`vipi-scanner` 0.15.0, `@v2` for 0.14.1 and `@v1` for 0.13.0, before SVG
+support.
 
 `vipi-version` lets you choose an explicit scanner release. VIPI's ADRs
 describe the
 [image check](https://github.com/EnXan/VIPI/blob/main/adr-code/0082-cloud-image-check-without-image-only-scans.md),
 the [metadata check](https://github.com/EnXan/VIPI/blob/main/adr-code/0083-image-metadata-reading.md),
-the [QR and barcode check](https://github.com/EnXan/VIPI/blob/main/adr-code/0084-barcode-reading.md)
+the [QR and barcode check](https://github.com/EnXan/VIPI/blob/main/adr-code/0084-barcode-reading.md),
+the [transparency views](https://github.com/EnXan/VIPI/blob/main/adr-code/0085-transparency-views.md),
+[Wolf Defender](https://github.com/EnXan/VIPI/blob/main/adr-code/0087-wolf-defender-replaces-prompt-guard.md),
+the OpenStego checks ([legacy](https://github.com/EnXan/VIPI/blob/main/adr-code/0088-legacy-openstego-reading.md),
+[RandomLSB](https://github.com/EnXan/VIPI/blob/main/adr-code/0089-openstego-random-lsb-reading.md))
 and the Action's
 [major-version policy](https://github.com/EnXan/VIPI/blob/main/adr-code/0076-action-threshold-follows-detector-default.md).
 

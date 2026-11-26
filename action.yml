@@ -56,7 +56,7 @@ inputs:
   vipi-version:
     description: vipi-scanner release from PyPI; the default is the release tested with this Action version
     required: false
-    default: "0.18.0"
+    default: "0.21.0"
   vipi-ref:
     description: For testing only; install vipi-scanner from this Git ref of EnXan/VIPI instead of PyPI
     required: false
