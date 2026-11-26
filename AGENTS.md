@@ -97,15 +97,15 @@ wires it into GitHub workflows. The design is recorded in VIPI's
    request, and let the tests pass.
 3. After merging, tag `vX.Y.Z` (patch: fixes or a new VIPI patch; minor: new
    inputs, outputs or behavior), create the GitHub release, and move the
-   corresponding major tag. The initial `v4.0.0` release creates `v4`.
-   `v3` and `v2` stay on their last compatible releases and `v1` stays on `v1.3.2`:
+   corresponding major tag. The initial `v5.0.0` release creates `v5`.
+   `v4`, `v3` and `v2` stay on their last compatible releases and `v1` stays on `v1.3.2`:
 
 ```bash
 git switch main
 git pull --ff-only
-git tag -a v4.0.0 -m "Release v4.0.0"
-git tag -a v4 -m "v4 → v4.0.0"
-git push origin v4.0.0 v4
+git tag -a v5.0.0 -m "Release v5.0.0"
+git tag -a v5 -m "v5 → v5.0.0"
+git push origin v5.0.0 v5
 ```
 
 For later compatible releases, moving the major tag is the only allowed
