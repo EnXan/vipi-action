@@ -5,11 +5,10 @@ images (PNG, JPEG, WebP and SVG) for visual prompt injections. It reads the text
 in each image with OCR, re-reads unclear images, and checks the final text with
 an injection detector. The text in an image's metadata (EXIF, XMP, PNG text,
 IPTC), the payloads of QR codes and barcodes and text hidden in PNG pixels with
-OpenStego are checked as well; an SVG
-scan also checks the file's source text. An image with transparent pixels is
-also scanned on black and with alpha dropped. In cloud mode, the same detector
-checks the whole image when the text check finds no injection. A finding fails
-the job.
+OpenStego are checked as well; an SVG scan also checks the file's source text.
+An image with transparent pixels is also scanned on black and with alpha
+dropped. In cloud mode, the same detector checks the whole image when the text
+check finds no injection. A finding fails the job.
 
 ## Demo
 
