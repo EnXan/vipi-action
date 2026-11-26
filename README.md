@@ -4,7 +4,8 @@ GitHub Action for [VIPI](https://github.com/EnXan/VIPI): scans repository
 images (PNG, JPEG, WebP and SVG) for visual prompt injections. It reads the text
 in each image with OCR, re-reads unclear images, and checks the final text with
 an injection detector. The text in an image's metadata (EXIF, XMP, PNG text,
-IPTC) and the payloads of QR codes and barcodes are checked as well; an SVG
+IPTC), the payloads of QR codes and barcodes and text hidden in PNG pixels with
+OpenStego are checked as well; an SVG
 scan also checks the file's source text. An image with transparent pixels is
 also scanned on black and with alpha dropped. In cloud mode, the same detector
 checks the whole image when the text check finds no injection. A finding fails
@@ -112,7 +113,7 @@ repository. Every input is optional; leave it out to use its default.
 | `report-path` | `vipi-report.json` | JSON report path, also exposed as an output |
 | `pr-comment` | `false` | Also post the summary as a pull request comment (see below) |
 | `github-token` | `github.token` | Token for the pull request comment |
-| `vipi-version` | `0.20.1` | `vipi-scanner` version installed from PyPI |
+| `vipi-version` | `0.21.0` | `vipi-scanner` version installed from PyPI |
 | `vipi-ref` | Unset | Testing only: install VIPI from this Git ref of `EnXan/VIPI` |
 
 ### Provider keys
@@ -189,13 +190,14 @@ Local mode installs the CPU builds of PyTorch on Linux and Windows.
 
 ## Versions
 
-Use `@v5`. Its initial release pins `vipi-scanner` 0.20.1, which also scans
-images with transparent pixels on black and with alpha dropped. These extra
-views can change findings and, in cloud mode, add OCR and detector requests
-for each distinct view. `detector: prompt-guard` no longer exists; use
+Use `@v5`. Its initial release pins `vipi-scanner` 0.21.0, which also scans
+images with transparent pixels on black and with alpha dropped, and checks
+text hidden in PNG pixels with OpenStego. These checks can change findings;
+the extra views add OCR and detector requests for each distinct view in cloud
+mode, and an OpenStego payload adds a detector request. `detector: prompt-guard` no longer exists; use
 `detector: wolf-defender`, which needs no `HF_TOKEN`. Both changes ship in a
 new Action major. Use `@v4` for the previous behavior with `vipi-scanner`
-0.18.0 (metadata and code checks, no transparency views), `@v3` for
+0.18.0 (metadata and code checks, no transparency views or OpenStego check), `@v3` for
 `vipi-scanner` 0.15.0, `@v2` for 0.14.1 and `@v1` for 0.13.0, before SVG
 support.
 
@@ -205,7 +207,9 @@ describe the
 the [metadata check](https://github.com/EnXan/VIPI/blob/main/adr-code/0083-image-metadata-reading.md),
 the [QR and barcode check](https://github.com/EnXan/VIPI/blob/main/adr-code/0084-barcode-reading.md),
 the [transparency views](https://github.com/EnXan/VIPI/blob/main/adr-code/0085-transparency-views.md),
-[Wolf Defender](https://github.com/EnXan/VIPI/blob/main/adr-code/0087-wolf-defender-replaces-prompt-guard.md)
+[Wolf Defender](https://github.com/EnXan/VIPI/blob/main/adr-code/0087-wolf-defender-replaces-prompt-guard.md),
+the OpenStego checks ([legacy](https://github.com/EnXan/VIPI/blob/main/adr-code/0088-legacy-openstego-reading.md),
+[RandomLSB](https://github.com/EnXan/VIPI/blob/main/adr-code/0089-openstego-random-lsb-reading.md))
 and the Action's
 [major-version policy](https://github.com/EnXan/VIPI/blob/main/adr-code/0076-action-threshold-follows-detector-default.md).
 
